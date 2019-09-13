@@ -1,0 +1,12 @@
+        // Calc least sqare plane point and normal
+        tmp<vectorField> lsPlanePointAndNormal
+        (
+            const vectorField& points,
+            const vector& origin,
+            const vector& axis
+        ) const;
+
+
+        //- Field which additionally determines 
+        //  the motion of free-surface points
+        mutable labelList* motionPointsMaskPtr_;

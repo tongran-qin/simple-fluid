@@ -1,0 +1,17 @@
+#!/bin/sh
+set -x
+
+wclean newFreeSurface
+#wclean newBubbleInterTrackFoam
+
+wclean newInterTrackFoam
+
+wclean utilities/setFluidIndicator
+
+#wclean ./utilities/adjustBubbleInterface
+
+#wclean ./utilities/objectFunctions/bubbleHistory
+
+#wclean ./utilities/objectFunctions/dropletHistory
+
+#wclean ./utilities/objectFunctions/sloshingHistory

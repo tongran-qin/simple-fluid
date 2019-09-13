@@ -1,0 +1,22 @@
+liqudFilmParallelFvMotionSolver/liquidFilmParallelFvMotionSolver.C
+liqudFilmFvMotionSolver/liquidFilmFvMotionSolver.C
+
+./correctedFvPatchFields/correctedFvPatchField/correctedFvPatchFields.C
+./correctedFvPatchFields/basicCorrectedFvPatchFields/fixedValue/fixedValueCorrectedFvPatchFields.C
+./correctedFvPatchFields/basicCorrectedFvPatchFields/fixedGradient/fixedGradientCorrectedFvPatchFields.C
+./correctedFvPatchFields/basicCorrectedFvPatchFields/zeroGradient/zeroGradientCorrectedFvPatchFields.C
+
+./patchCorrectedSnGrad/patchCorrectedSnGrads.C
+./skewCorrectedSnGrad/skewCorrectedSnGrads.C
+
+ddtSchemes/EulerDdtScheme.C
+ddtSchemes/backwardDdtScheme.C
+
+leastSquaresSkewCorrected/leastSquaresSkewCorrected.C
+
+freeSurface.C
+makeFreeSurfaceData.C
+freeSurfacePointDisplacement.C
+faMesh.C
+
+LIB = $(FOAM_USER_LIBBIN)/libsim-fluid

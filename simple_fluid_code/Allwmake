@@ -1,0 +1,118 @@
+#!/bin/sh
+set -x
+
+wmake libso newFreeSurface
+#wmake libso moveDynamicMesh
+wmake newInterTrackFoam
+wmake utilities/setFluidIndicator
+##################################
+#/home/tqin6/OpenFOAM/tqin6-1.6-ext/interTrackFoam/july/methanol-air/0721/ref-inv4mm-acm0.05
+# pure water in liquid, water vapor in air
+
+# Absolute pressure is updated via conservation of mass of air
+# Based on 0523nonIsoTempFoam
+
+# Buoyancy included in modified old way
+
+# tangentialSurfaceTensionForce is commented out (The tangential component of the surface stress should vanish unless there is either a thermo- or a soluto-capillary effect.)
+
+# 05/17/2011
+# solve rhoVapor and TFs iteratively inside function updateMassflux() to make sure they concverge
+
+# 05/21/2011
+# con().boundaryField()[aPatchID()] == conB;
+
+# 05/22/2011
+# change the way initializing concentration field, this solver is suitable for resuming calculation from previous results
+# comment out con = Mv0/18.0153/((Mv0/18.0153)+(Ma0/28.97)) in creatFields.H;
+
+# 05/22/2011
+# alomost SAME as 0523nonIsoTempFoam, just don't output J,TFs,TSat,etc.
+# Abort simulations when it won't converge, for TFs-rhoVapor loop and p,T.con loop
+#        else
+#        {
+#            FatalErrorIn("freeSurface::updateMassflux()")
+#                << "Iterations for TFs and rhoVapor haven't converged after 1e4 steps, probably won't converge "
+#                    << abort(FatalError);
+#        }
+
+# 05/23/2011
+# in newInterTrackFoam, make sure that pressure is convergent before solving Temp and concentration equation
+
+# 05/24/2011
+# Change the criteria for convergence of TFs and rhoVapor1/2 inside function updateMassflux() as follows when dealing with 90 degree contact angle (otherwise it seems TFs, rhoVapor won't converge)
+# e.g. dTFs = max(TFs-TFsOld)/(min(TFs)+VSMALL);
+# instead of dTFs = (max(TFs-TFsOld)-min(TFs-TFsOld))/(max(TFs)-min(TFs)+VSMALL);
+
+# 05/28/2011
+# set conVapor = fluidIndicator*( (max(con) + min(con) )/2) + (1.0-fluidIndicator)*con; in con.H so that concentration in liquid is a constant.
+
+# 05/28/2011
+# Calculate TRef separately in liquid and gas phase
+
+# 12/14/2011 # auto_write J, Ti field
+# 01/20/2012 # zeroGradient for Ti field
+
+# 02/07/2012 # incoporate Zeljko's correction (faMesh.C) for treating contact angle in parallel running, said to work in 2D cases
+
+# 02/09/2012 # J = - D*(n&grad(rho)), instead of -D*rho*(n&grad(c)) 
+
+# 02/16/2012 # algebraic mesh motion solver which currently works only for serial runs
+
+# 02/19/2012 # I(Zeljko) have implemented freeSurface::grad(areaScalarField& Ts) function which you can now use to calculate surface gradient of temperature. If you set calculated boundary condition for temperature (see makeTi()), value of temperature at the corresponding boundary will be calculated using linear extrapolation (vanishing second derivative).
+
+# 02/27/2012 # NO artifacially move the whole interface up/down to enforce the constant volume
+# 03/13/2012 # Move the the whole interface up/down, corresponding the volume and the mass flux
+# 03/13/2012 # modify moveInterface(Vold,Vnew)
+# 03/13/2012 # (NOT) include "correctPhiAtInterface.H"
+
+# 03/13/2012 # include "correctPhiAtInterface.H"
+# 03/20/2012 # vectorField nGradU, change typo DnA to DnB
+# 03/22/2012 # modify the way calculating UnFs, cancelled J effects
+# 03/29/2012 # incoporate correctPhiAtWalls.H into buoyancy.H
+
+# 05/17/2012 # # new correctcontactlinenormals, etc in freeSurfacePointDisplacement,etc
+
+# 07/03/2012 # # new boundary condition, considering convection at the freesurface, Vn at the interface is incoorporated
+
+# 07/04/2012 # # incoorporate accommodation coefficient
+
+# 07/06/2012 # # density as a function of temperature, define rhoRef,beta,TRef, change the way buoyancy is calculated(in both the main code and freeSurface.C), change the sign for buoForce term
+
+# 07/10/2012 # # update new mesh motion solver
+
+# 07/10/2012 # # the temperature dependent density (for liquid) is only used for calculating buoyancy force, spatially averged value is used for NS equation and others. Boundary condition for pressure at the interface is updated in the main code;
+# DensityandConcentration.H: updating density field
+# buoyancy.H : updating buoyancy force field, then density field is set as phase averged values
+# correctPhiAtInterface.H: correct phi at the interface
+# correctPAtInterface.H: correct boundary conditions for pressure due to buoyancy at the interface
+# correctBCsAtWalls.H: correct phi & boundary condition for pressure on the walls
+
+# 07/21/2012 # # implementation of parallel algebraic mesh motion solver
+# modify newFreeSurface/faMesh.C file.
+# modify freeSurface::correctContactLinePointNormals()
+# createTangentField.H and addNgbProcessorEdgeTangent.H need to be added into newFreeSurface
+#    -ldynamicMesh \
+#    -I$(LIB_SRC)/dynamicMesh/dynamicMesh/lnInclude \
+# change mesh().points() to mesh().AllPoints() in freeSurface.C
+
+# 08/20/2012 split boundary condition update
+
+# 08/22/2012 set pAtm as a parameter so the total pressure can be changed
+
+# 02/12/2013 incorporate interface smoothing, update the function makecontactAngle(), new initialization for buoyancy field
+# 04/05/2013 no wall conduction
+
+# 09/01/2014 change the way to correctly initial the density rhoB and rho within the function interface.updatemassflux();
+
+# 02/12/2014 update faMesh.C for better parallel running
+# 	     "createFields.H" create properties for a mixture, including c0, rho will be initiated after interface.initializeConcentration() in the main code at time 0
+# 	     "DensityandConcentration.H": no need to update Dfluid, and "rho1Vapor" within the loop. Therefore Dfluid won't be updated, "rho1Vapor" will be updated after each time step
+# 	     interface.initializeConcentration():rhoFluidB_.value() = (rhoVapor1 + rhoVaporD).value(); also c0_.value() = conini1; rho()=(1-fluidIndicator())*rhoVaporB() + fluidIndicator()*rhoFluidA();
+#	     main code, changed criteria for rho1
+#	     decrease upper limit for newton iteration and outer loop
+
+# 06/18/2016 nt is set as constant 
+# 06/18/2016 update the calculation of con, con = p1/pAbs, stop using con = nc1/nt because the latter one could cause con>1
+# 
+
